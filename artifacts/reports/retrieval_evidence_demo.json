@@ -1,0 +1,79 @@
+{
+  "confidence_margin": 0.0023102760314941406,
+  "evidence_split": "train",
+  "explanation": "Review required because the top-two confidence margin is below 0.08. Supporting public training examples: [BANKING77:train-09373], [BANKING77:train-03530].",
+  "hits": [
+    {
+      "anchor_id": "cash_withdrawal_charge",
+      "evidence": [
+        {
+          "anchor_id": "cash_withdrawal_charge",
+          "citation_id": "BANKING77:train-09373",
+          "example_id": "train-09373",
+          "score": 0.5751277804374695,
+          "source": "BANKING77 train",
+          "text": "I have a question about fee for cash withdraw."
+        },
+        {
+          "anchor_id": "cash_withdrawal_charge",
+          "citation_id": "BANKING77:train-09489",
+          "example_id": "train-09489",
+          "score": 0.5632796883583069,
+          "source": "BANKING77 train",
+          "text": "Is there a charge for getting cash?"
+        }
+      ],
+      "label": "cash withdrawal charge",
+      "score": 0.5718547105789185
+    },
+    {
+      "anchor_id": "card_payment_not_recognised",
+      "evidence": [
+        {
+          "anchor_id": "card_payment_not_recognised",
+          "citation_id": "BANKING77:train-03530",
+          "example_id": "train-03530",
+          "score": 0.5970863103866577,
+          "source": "BANKING77 train",
+          "text": "There is a card payment I'm not familiar with."
+        },
+        {
+          "anchor_id": "card_payment_not_recognised",
+          "citation_id": "BANKING77:train-03649",
+          "example_id": "train-03649",
+          "score": 0.571628212928772,
+          "source": "BANKING77 train",
+          "text": "There is a card payment that I'm not recognizing."
+        }
+      ],
+      "label": "card payment not recognised",
+      "score": 0.5695444345474243
+    },
+    {
+      "anchor_id": "wrong_amount_of_cash_received",
+      "evidence": [
+        {
+          "anchor_id": "wrong_amount_of_cash_received",
+          "citation_id": "BANKING77:train-02408",
+          "example_id": "train-02408",
+          "score": 0.5219097137451172,
+          "source": "BANKING77 train",
+          "text": "I didn't receive the correct amount of cash"
+        },
+        {
+          "anchor_id": "wrong_amount_of_cash_received",
+          "citation_id": "BANKING77:train-02355",
+          "example_id": "train-02355",
+          "score": 0.5116681456565857,
+          "source": "BANKING77 train",
+          "text": "The amount of cash I received was not the full amount"
+        }
+      ],
+      "label": "wrong amount of cash received",
+      "score": 0.5473589897155762
+    }
+  ],
+  "model_version": "models/listwise_hard_teacher_minilm",
+  "needs_review": true,
+  "query": "cash card payment"
+}

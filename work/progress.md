@@ -57,11 +57,6 @@
   26 tests passed with one live-systems test skipped, isolation scan safe over
   190 files, and wheel/sdist build succeeded.
 
-## Still pending after local validation
-
-- Add retrieval explanations with citations; the current retrieval endpoint is
-  not described as a deployed RAG system.
-
 ## Remote validation
 
 - Pushed `agent/complete-experiment-matrix` and opened draft PR #1.
@@ -72,3 +67,8 @@
   the base runtime were upgraded; only upstream-unfixed findings are ignored.
 - Updated and rendered both local resume variants after the remote gates
   passed.
+- Added train-only evidence embeddings and typed citations to `/v1/retrieve`,
+  plus runnable `retrieval build` and `retrieval query` CLI commands.
+- Built the real 10,003-record BANKING77 training evidence index. The ambiguous
+  `cash card payment` demo produced margin 0.0023, routed to review, and cited
+  the top competing public training examples.

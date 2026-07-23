@@ -20,6 +20,7 @@ evaluate_app = typer.Typer(no_args_is_help=True)
 benchmark_app = typer.Typer(no_args_is_help=True)
 train_app = typer.Typer(no_args_is_help=True)
 report_app = typer.Typer(no_args_is_help=True)
+retrieval_app = typer.Typer(no_args_is_help=True)
 app.add_typer(data_app, name="data")
 app.add_typer(teacher_app, name="teacher")
 app.add_typer(isolation_app, name="isolation")
@@ -27,6 +28,7 @@ app.add_typer(evaluate_app, name="evaluate")
 app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(train_app, name="train")
 app.add_typer(report_app, name="report")
+app.add_typer(retrieval_app, name="retrieval")
 
 
 class OutputFormat(StrEnum):
@@ -38,6 +40,105 @@ class OutputFormat(StrEnum):
 def data_prepare() -> None:
     manifest = prepare_banking77()
     typer.echo(json.dumps(manifest, indent=2, sort_keys=True))
+
+
+@retrieval_app.command("build")
+def retrieval_build(
+    model_name: Annotated[
+        str,
+        typer.Option(help="SentenceTransformer model or local model path."),
+    ] = "models/listwise_hard_teacher_minilm",
+    index_name: Annotated[
+        str,
+        typer.Option(help="NPZ filename under models/."),
+    ] = "banking77_evidence_index.npz",
+) -> None:
+    from sentence_transformers import SentenceTransformer
+
+    from anchor_distill.data import anchors_from_categories, load_banking77
+    from anchor_distill.retrieval import build_index, save_index_manifest
+    from anchor_distill.training import _device_name
+
+    settings = Settings()
+    examples = load_banking77(settings.path("data", "raw", "banking77"))
+    anchors = anchors_from_categories(example.category for example in examples)
+    model = SentenceTransformer(model_name, device=_device_name())
+    index = build_index(
+        model,
+        anchors,
+        model_version=model_name,
+        examples=examples,
+    )
+    destination = settings.path("models", index_name)
+    index.save(destination)
+    manifest = destination.with_suffix(".manifest.json")
+    save_index_manifest(manifest, index)
+    typer.echo(
+        json.dumps(
+            {
+                "anchors": len(index.anchor_ids),
+                "evidence_records": len(index.evidence_ids),
+                "evidence_split": "train",
+                "index": str(destination.relative_to(settings.project_root)),
+                "manifest": str(manifest.relative_to(settings.project_root)),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@retrieval_app.command("query")
+def retrieval_query(
+    query: Annotated[str, typer.Option(min=1, max=2000)],
+    model_name: Annotated[
+        str,
+        typer.Option(help="Model used to build the evidence index."),
+    ] = "models/listwise_hard_teacher_minilm",
+    index_name: Annotated[
+        str,
+        typer.Option(help="NPZ filename under models/."),
+    ] = "banking77_evidence_index.npz",
+    top_k: Annotated[int, typer.Option(min=1, max=20)] = 3,
+    evidence_per_hit: Annotated[int, typer.Option(min=1, max=5)] = 2,
+    output_name: Annotated[
+        str | None,
+        typer.Option(help="Optional JSON filename under artifacts/reports/."),
+    ] = None,
+) -> None:
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
+
+    from anchor_distill.retrieval import NumpyIndex, retrieve_with_evidence
+    from anchor_distill.training import _device_name
+
+    settings = Settings()
+    model = SentenceTransformer(model_name, device=_device_name())
+    index = NumpyIndex.load(settings.path("models", index_name))
+    if index.model_version != model_name:
+        raise typer.BadParameter(
+            f"index expects {index.model_version!r}, received {model_name!r}"
+        )
+    embedding = np.asarray(
+        model.encode(
+            [query],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+    )[0]
+    result = retrieve_with_evidence(
+        index,
+        embedding,
+        query=query,
+        top_k=top_k,
+        evidence_per_hit=evidence_per_hit,
+    )
+    if output_name:
+        destination = settings.path("artifacts", "reports", output_name)
+        destination.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+        result["artifact"] = str(destination.relative_to(settings.project_root))
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @teacher_app.command("probe")

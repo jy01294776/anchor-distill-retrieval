@@ -25,6 +25,8 @@ Validated experiment evidence now includes:
 - paired bootstrap comparisons and an explicit multiple-test-look limitation;
 - a Sentence-T5-XL reference and local parameter/throughput/RSS comparison;
 - a quality/performance/cost frontier with observed and projected teacher cost;
+- a 10,003-record train-only evidence index and low-confidence retrieval demo
+  with typed public-example citations and deterministic explanations;
 - 26 passing local tests, strict mypy, Ruff, a safe 190-file isolation scan,
   and successful wheel/sdist builds.
 

@@ -60,3 +60,11 @@
   security updates, and upgraded `wheel` and `jaraco.context`. The gate ignores
   only findings without an upstream fix and retains a failing exit code for
   fixable HIGH/CRITICAL findings; no CVE is individually allowlisted.
+- Retrieval explanations are deterministic and citation-grounded. The evidence
+  index is built exclusively from the public BANKING77 training split, while
+  the test split remains excluded from indexing and retrieval.
+- Low-confidence routing uses the top-two score margin. The demo triggered
+  review at margin 0.0023 and exposes cited training examples rather than
+  asking an LLM to generate an unsupported answer.
+- The feature is called a citation-grounded retrieval demo, not a deployed RAG
+  system.

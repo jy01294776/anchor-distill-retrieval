@@ -90,6 +90,22 @@ The probe checks Structured Outputs, token log-probabilities, five-label mass
 coverage, refusal handling, and model snapshot metadata. It never sends
 benchmark or research data.
 
+Build and query the citation-grounded evidence index:
+
+```bash
+uv run anchor-distill retrieval build \
+  --model-name models/listwise_hard_teacher_minilm
+uv run anchor-distill retrieval query \
+  --query "cash card payment" \
+  --model-name models/listwise_hard_teacher_minilm
+```
+
+The index contains all 10,003 public training examples and excludes the test
+split. Each hit returns example IDs, text, intent, source, and cosine score. A
+deterministic explanation cites the highest-ranked training evidence and sends
+low-margin cases to review; it does not ask an LLM to invent an answer. See
+`artifacts/reports/retrieval_evidence_demo.json`.
+
 ## Validated public results
 
 All rows below use the 3,080-example BANKING77 test split.
@@ -128,6 +144,10 @@ throughput is not a service SLA.
 See `artifacts/benchmarks/` and
 `artifacts/reports/quality_cost_frontier.md` for machine-readable evidence and
 interpretation limits.
+
+The ambiguous-query demo (`cash card payment`) produced a top-two margin of
+0.0023, triggered review, and cited competing training evidence as
+`BANKING77:train-09373` and `BANKING77:train-03530`.
 
 ## Evidence policy
 

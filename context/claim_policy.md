@@ -36,6 +36,9 @@ Current allowed public-project claims:
 - Built the container in GitHub Actions, generated an SBOM, upgraded fixable
   HIGH dependencies, and passed the Trivy HIGH/CRITICAL gate while ignoring
   only findings with no upstream fix.
+- Built a 10,003-record, train-only evidence index whose low-confidence
+  retrieval explanations cite public example IDs and never retrieve from the
+  evaluation split.
 
 Current prohibited claims:
 
@@ -52,3 +55,5 @@ Interpretation requirements:
 - MPS training is seeded and versioned but is not claimed to be bitwise
   deterministic across repeated runs.
 - Local batch throughput is not a production-service SLA.
+- Citation-grounded retrieval is described as a packaged demo, not as a
+  deployed RAG service or an LLM-generated answer.

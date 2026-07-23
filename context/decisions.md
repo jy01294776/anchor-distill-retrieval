@@ -68,3 +68,6 @@
   asking an LLM to generate an unsupported answer.
 - The feature is called a citation-grounded retrieval demo, not a deployed RAG
   system.
+- The doctoral source backup remains in a separate private repository. Its name
+  and URL are intentionally omitted from this public project, and the public
+  repository must never import files from that backup.

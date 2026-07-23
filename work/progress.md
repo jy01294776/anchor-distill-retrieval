@@ -72,3 +72,7 @@
 - Built the real 10,003-record BANKING77 training evidence index. The ambiguous
   `cash card payment` demo produced margin 0.0023, routed to review, and cited
   the top competing public training examples.
+- Reverified the separate doctoral freeze: source, data, and artifact
+  before/after hash manifests are identical. A source-only, no-history backup
+  was pushed to a distinct private repository after tracked-file secret and
+  data-extension scans passed; no doctoral files entered this repository.

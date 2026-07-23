@@ -66,6 +66,9 @@ POST /v1/retrieve
 FastAPI serves the API, PostgreSQL stores job state and idempotency keys,
 Redis/Celery executes at-least-once tasks, and idempotent checkpoints prevent
 duplicate artifact commits. MLflow records model lineage and promotion gates.
+GitHub Actions verifies a live PostgreSQL/Redis/Celery round trip, builds the
+wheel and container image, generates an SBOM, and gates the image on fixable
+HIGH/CRITICAL Trivy findings.
 
 ## Quick start
 
@@ -131,6 +134,8 @@ interpretation limits.
 - `artifacts/` contains validated reports and benchmarks.
 - `context/claim_policy.md` maps every allowed resume claim to evidence.
 - Failed or null experiments remain visible.
+- CI evidence distinguishes fixed vulnerabilities from upstream-unfixed CVEs;
+  no individual CVE is allowlisted.
 - `Productized` and `Deployed` are prohibited until a real deployment is
   verified.
 - Resume files under `artifacts/resume/` are local-only and git-ignored because

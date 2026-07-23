@@ -59,8 +59,16 @@
 
 ## Still pending after local validation
 
-- Push the experiment branch, open a draft pull request, and verify the real
-  PostgreSQL/Redis/Celery, container, SBOM, and Trivy jobs in GitHub Actions.
-- Update the two local resume variants only after remote evidence is known.
 - Add retrieval explanations with citations; the current retrieval endpoint is
   not described as a deployed RAG system.
+
+## Remote validation
+
+- Pushed `agent/complete-experiment-matrix` and opened draft PR #1.
+- GitHub Actions passed strict tests, package build, the live
+  PostgreSQL/Redis/Celery system round trip, container build, SBOM generation,
+  and the Trivy HIGH/CRITICAL gate.
+- The security gate first failed on real findings. Fixable Python packages and
+  the base runtime were upgraded; only upstream-unfixed findings are ignored.
+- Updated and rendered both local resume variants after the remote gates
+  passed.

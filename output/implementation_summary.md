@@ -29,9 +29,10 @@ Validated experiment evidence now includes:
   and successful wheel/sdist builds.
 
 The public repository is
-`https://github.com/jy01294776/anchor-distill-retrieval`. A draft pull request
-and remote systems/container validation are the next gates; those capabilities
-are not yet described as remotely verified.
+`https://github.com/jy01294776/anchor-distill-retrieval`; draft PR #1 contains
+the completed experiment matrix. GitHub Actions verifies tests, packaging, a
+live PostgreSQL/Redis/Celery job round trip, container construction, SBOM
+generation, and the fixable HIGH/CRITICAL vulnerability gate.
 
 The doctoral repository remains frozen and unmodified. The public project has
 no dependency on its data, source, outputs, constructs, or model artifacts.

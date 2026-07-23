@@ -53,3 +53,10 @@
 - A real PostgreSQL/Redis/Celery round-trip and container security scan were
   added to GitHub Actions; they remain unverified until the remote workflow
   passes.
+- GitHub Actions subsequently verified the PostgreSQL/Redis/Celery round trip,
+  wheel build, container build, and SBOM generation.
+- Trivy initially blocked the image on fixable Python and upstream-unfixed
+  Debian findings. The runtime moved to Python 3.12 Bookworm, installed system
+  security updates, and upgraded `wheel` and `jaraco.context`. The gate ignores
+  only findings without an upstream fix and retains a failing exit code for
+  fixable HIGH/CRITICAL findings; no CVE is individually allowlisted.

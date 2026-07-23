@@ -32,6 +32,10 @@ Current allowed public-project claims:
 - Built and locally tested recoverable job orchestration, including injected
   worker-crash checkpoint recovery.
 - Built a reproducible wheel and source distribution.
+- Verified a live PostgreSQL/Redis/Celery job round trip in GitHub Actions.
+- Built the container in GitHub Actions, generated an SBOM, upgraded fixable
+  HIGH dependencies, and passed the Trivy HIGH/CRITICAL gate while ignoring
+  only findings with no upstream fix.
 
 Current prohibited claims:
 
@@ -39,7 +43,6 @@ Current prohibited claims:
 - The hybrid run significantly improves over the 77-label gold baseline.
 - The compact student is formally equivalent to Sentence-T5-XL.
 - The system reduces production cost.
-- The container or Compose stack has been built successfully.
 - The system is deployed or productized.
 
 Interpretation requirements:

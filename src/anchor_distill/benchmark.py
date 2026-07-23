@@ -29,6 +29,8 @@ class BenchmarkResult:
     python_traced_peak_memory_mb: float
     process_peak_rss_mb: float
     embedding_dimension: int
+    parameter_count: int
+    parameter_memory_mb: float
     python: str
     platform: str
 
@@ -71,6 +73,13 @@ def benchmark_encoder(
         if platform.system() == "Darwin"
         else maximum_rss / 1024
     )
+    parameters_method = getattr(model, "parameters", None)
+    parameters = list(parameters_method()) if callable(parameters_method) else []
+    parameter_count = sum(int(parameter.numel()) for parameter in parameters)
+    parameter_bytes = sum(
+        int(parameter.numel()) * int(parameter.element_size())
+        for parameter in parameters
+    )
     per_request_ms = [value * 1000 for value in timings]
     return BenchmarkResult(
         model_version=model_version,
@@ -82,6 +91,8 @@ def benchmark_encoder(
         python_traced_peak_memory_mb=peak / (1024 * 1024),
         process_peak_rss_mb=rss_megabytes,
         embedding_dimension=dimension,
+        parameter_count=parameter_count,
+        parameter_memory_mb=parameter_bytes / (1024 * 1024),
         python=platform.python_version(),
         platform=platform.platform(),
     )

@@ -27,8 +27,10 @@ validated experiment artifacts.
 ## Public benchmark
 
 The benchmark uses BANKING77, a CC BY 4.0 dataset with 77 fine-grained intents.
-Official test examples are never used for teacher labeling, training, prompt
-selection, or model promotion.
+Official test examples are never used for teacher labeling or training.
+Because several candidate systems have now been evaluated on the same test
+split, comparisons are reported as exploratory rather than as a single-look
+confirmatory result.
 
 Compared systems:
 
@@ -87,23 +89,42 @@ benchmark or research data.
 
 ## Validated public results
 
-The current evidence package is intentionally small but real:
+All rows below use the 3,080-example BANKING77 test split.
 
-- MiniLM zero-shot on 3,080 held-out BANKING77 examples: Recall@1 0.6237,
-  Recall@5 0.8481, and MRR 0.7251.
-- MiniLM fine-tuned on one public example per intent (77 labels): Recall@1
-  0.6594, Recall@5 0.8740, and MRR 0.7573.
-- Paired 2,000-replicate bootstrap: Recall@1 difference +0.0357 with a 95%
-  interval of [0.0276, 0.0438].
-- The public teacher compatibility probe selected `gpt-4o-mini`; a 10-pair
-  pilot passed the token-mass gate for all records. This pilot does not support
-  a general teacher-quality or distillation-effect claim.
-- Local Apple-silicon/MPS batch benchmark (256 texts, five repeats): 2,591
-  texts/second and 157.5 ms p95. This is a local benchmark, not a service SLA.
+| System | Human labels | Teacher pairs | Recall@1 | Recall@5 | MRR |
+|---|---:|---:|---:|---:|---:|
+| MiniLM zero-shot | 0 | 0 | 0.6237 | 0.8481 | 0.7251 |
+| MiniLM gold 1-shot | 77 | 0 | 0.6594 | 0.8740 | 0.7573 |
+| MiniLM gold 4-shot | 308 | 0 | 0.7075 | 0.9214 | 0.8001 |
+| MiniLM gold 16-shot | 1,232 | 0 | 0.8269 | 0.9662 | 0.8885 |
+| MiniLM gold full | 10,003 | 0 | 0.9192 | 0.9903 | 0.9504 |
+| MiniLM listwise hard KD | 0 | 1,280 | 0.6519 | 0.8705 | 0.7509 |
+| MiniLM listwise soft KD | 0 | 1,280 | 0.6318 | 0.8438 | 0.7272 |
+| MiniLM listwise hybrid | 77 | 1,280 | 0.6623 | 0.8724 | 0.7582 |
+| Sentence-T5-XL zero-shot | 0 | 0 | 0.6516 | 0.8633 | 0.7497 |
 
-See `artifacts/benchmarks/` and `artifacts/reports/`. The full 1/4/16-shot,
-hard/soft/hybrid distillation, full-supervision, and large-encoder experiment
-matrix remains pending.
+The listwise hard student improved Recall@1 over zero-shot MiniLM by 0.0282
+(paired 95% bootstrap interval [0.0195, 0.0380]). Soft-target KD was 0.0201
+below hard-target KD ([-0.0302, -0.0110]); the experiment therefore does not
+support a claim that soft targets improve retrieval in this setting. Adding
+the teacher signal to the 77-label run changed Recall@1 by only 0.0029
+([-0.0032, 0.0091]).
+
+The public teacher run produced 1,920 accepted query-anchor judgments over 192
+training/calibration queries. It cost $0.0473 at the recorded token mix, with
+pair accuracy 0.8891, Brier score 0.0925, and ECE 0.0842 on the 64-query
+calibration partition.
+
+The 22.7M-parameter listwise-hard student and 1.24B-parameter Sentence-T5-XL
+had nearly identical Recall@1 point estimates (difference 0.0003; interval
+[-0.0146, 0.0146]). On the same local Apple-silicon/MPS benchmark, the student
+used 54.7x fewer parameters, measured 24.0x higher throughput, and used 4.6x
+less peak RSS. This interval is not a formal equivalence test, and local
+throughput is not a service SLA.
+
+See `artifacts/benchmarks/` and
+`artifacts/reports/quality_cost_frontier.md` for machine-readable evidence and
+interpretation limits.
 
 ## Evidence policy
 

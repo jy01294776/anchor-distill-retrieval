@@ -1,0 +1,18 @@
+{
+  "baseline_model": "models/listwise_hard_teacher_minilm",
+  "candidate_model": "models/listwise_soft_teacher_minilm",
+  "examples": 3080,
+  "recall_at_1": {
+    "ci_high": -0.01103896103896104,
+    "ci_low": -0.030194805194805194,
+    "difference": -0.02012987012987013,
+    "probability_positive": 0.0
+  },
+  "reciprocal_rank": {
+    "ci_high": -0.017866306577819336,
+    "ci_low": -0.029616639287288467,
+    "difference": -0.02371926728116365,
+    "probability_positive": 0.0
+  },
+  "split": "test"
+}

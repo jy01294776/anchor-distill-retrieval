@@ -24,6 +24,7 @@ artifacts/reports/*
 !artifacts/**/.gitkeep
 !artifacts/benchmarks/*.json
 !artifacts/reports/*.json
+!artifacts/reports/*.md
 artifacts/resume/
 work/logs/*
 !work/logs/.gitkeep

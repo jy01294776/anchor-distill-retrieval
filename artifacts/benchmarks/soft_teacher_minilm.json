@@ -1,0 +1,11 @@
+{
+  "ece": 0.07772954413364944,
+  "examples": 3080,
+  "macro_f1": 0.07714815266609192,
+  "model_version": "models/soft_teacher_minilm",
+  "mrr": 0.1828181155644758,
+  "ndcg_at_10": 0.21302505572635166,
+  "recall_at_1": 0.09772727272727273,
+  "recall_at_5": 0.2396103896103896,
+  "split": "test"
+}

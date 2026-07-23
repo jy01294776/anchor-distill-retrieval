@@ -1,0 +1,18 @@
+{
+  "baseline_model": "sentence-transformers/sentence-t5-xl",
+  "candidate_model": "models/listwise_hard_teacher_minilm",
+  "examples": 3080,
+  "recall_at_1": {
+    "ci_high": 0.01461038961038961,
+    "ci_low": -0.01461038961038961,
+    "difference": 0.0003246753246753247,
+    "probability_positive": 0.523
+  },
+  "reciprocal_rank": {
+    "ci_high": 0.010846435138138322,
+    "ci_low": -0.008595482229871899,
+    "difference": 0.0012121041536294873,
+    "probability_positive": 0.5885
+  },
+  "split": "test"
+}

@@ -152,6 +152,22 @@ def stratified_few_shot(
     return selected
 
 
+def select_training_examples(
+    examples: Iterable[BankingExample],
+    *,
+    shots_per_category: int | None,
+    seed: int,
+) -> list[BankingExample]:
+    values = list(examples)
+    if shots_per_category is None:
+        return [example for example in values if example.split == "train"]
+    return stratified_few_shot(
+        values,
+        shots_per_category,
+        seed=seed,
+    )
+
+
 def write_examples(path: Path, examples: Iterable[BankingExample]) -> None:
     rows = [asdict(example) for example in examples]
     _atomic_write(

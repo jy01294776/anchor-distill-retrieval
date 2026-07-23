@@ -34,3 +34,33 @@
 - Complete cost accounting and a larger teacher-calibration gold set before
   making distillation-effect or cost-savings claims.
 - Publish to GitHub after authentication is renewed.
+
+## 2026-07-23
+
+- Created and pushed the public GitHub repository:
+  `https://github.com/jy01294776/anchor-distill-retrieval`.
+- Completed 4-shot, 16-shot, and full-supervision MiniLM baselines plus the
+  Sentence-T5-XL zero-shot reference.
+- Completed a budget-capped public teacher run: 1,920/1,920 accepted pairs,
+  269,422 prompt tokens, 11,520 completion tokens, and $0.0473 observed cost.
+- Completed ordinal and listwise hard, soft, and hybrid distillation. The
+  ordinal pairwise objective failed; listwise hard KD improved Recall@1 by
+  0.0282 over zero-shot MiniLM. Soft KD was 0.0201 below hard KD, and the
+  hybrid-vs-1-shot interval crossed zero.
+- Generated the quality/performance/cost frontier and measured the 22.7M
+  student against the 1.24B Sentence-T5-XL reference.
+- Added an actual PostgreSQL/Redis/Celery job round-trip test to GitHub Actions
+  and changed container scanning to inspect the locally loaded image.
+- Removed three machine-specific absolute paths from the public teacher
+  summary and added a regression test for relative artifact paths.
+- Local validation passes: Ruff format/check, strict mypy over 26 source files,
+  26 tests passed with one live-systems test skipped, isolation scan safe over
+  190 files, and wheel/sdist build succeeded.
+
+## Still pending after local validation
+
+- Push the experiment branch, open a draft pull request, and verify the real
+  PostgreSQL/Redis/Celery, container, SBOM, and Trivy jobs in GitHub Actions.
+- Update the two local resume variants only after remote evidence is known.
+- Add retrieval explanations with citations; the current retrieval endpoint is
+  not described as a deployed RAG system.

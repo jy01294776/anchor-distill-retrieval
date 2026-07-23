@@ -69,6 +69,11 @@ class TeacherRecord(BaseModel):
     accepted: bool
     refusal: bool = False
     request_id: str | None = None
+    prompt_tokens: int = Field(default=0, ge=0)
+    cached_prompt_tokens: int = Field(default=0, ge=0)
+    completion_tokens: int = Field(default=0, ge=0)
+    estimated_cost_usd: float = Field(default=0.0, ge=0)
+    latency_ms: float = Field(default=0.0, ge=0)
 
     @field_validator("label_probabilities")
     @classmethod

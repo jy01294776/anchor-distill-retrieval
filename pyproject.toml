@@ -58,6 +58,9 @@ packages = ["src/anchor_distill"]
 testpaths = ["tests"]
 addopts = "-q"
 asyncio_mode = "auto"
+markers = [
+  "systems_e2e: requires live PostgreSQL, Redis, and a Celery worker",
+]
 
 [tool.ruff]
 line-length = 88

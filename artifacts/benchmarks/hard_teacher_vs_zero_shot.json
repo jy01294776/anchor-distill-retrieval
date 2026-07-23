@@ -1,0 +1,18 @@
+{
+  "baseline_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "candidate_model": "models/hard_teacher_minilm",
+  "examples": 3080,
+  "recall_at_1": {
+    "ci_high": -0.5,
+    "ci_low": -0.5376623376623376,
+    "difference": -0.5188311688311689,
+    "probability_positive": 0.0
+  },
+  "reciprocal_rank": {
+    "ci_high": -0.5256462107485838,
+    "ci_low": -0.5550149200859406,
+    "difference": -0.5404063697588597,
+    "probability_positive": 0.0
+  },
+  "split": "test"
+}

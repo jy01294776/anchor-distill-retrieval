@@ -96,7 +96,7 @@ jobs:
           image: anchor-distill:${{ github.sha }}
           artifact-name: anchor-distill.spdx.json
           upload-release-assets: false
-      - uses: aquasecurity/trivy-action@0.36.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: anchor-distill:${{ github.sha }}
           severity: CRITICAL,HIGH

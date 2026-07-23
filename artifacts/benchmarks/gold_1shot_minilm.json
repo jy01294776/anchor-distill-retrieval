@@ -1,0 +1,11 @@
+{
+  "ece": 0.6386917316388073,
+  "examples": 3080,
+  "macro_f1": 0.6511975818406609,
+  "model_version": "models/gold_1shot_minilm",
+  "mrr": 0.7573005720511371,
+  "ndcg_at_10": 0.796920305907404,
+  "recall_at_1": 0.6594155844155845,
+  "recall_at_5": 0.874025974025974,
+  "split": "test"
+}

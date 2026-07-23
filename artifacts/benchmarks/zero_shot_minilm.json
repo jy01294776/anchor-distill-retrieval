@@ -1,0 +1,11 @@
+{
+  "ece": 0.6029147962652535,
+  "examples": 3080,
+  "macro_f1": 0.6127270283873064,
+  "model_version": "sentence-transformers/all-MiniLM-L6-v2",
+  "mrr": 0.7250591723510329,
+  "ndcg_at_10": 0.7654479667080855,
+  "recall_at_1": 0.6237012987012988,
+  "recall_at_5": 0.8480519480519481,
+  "split": "test"
+}

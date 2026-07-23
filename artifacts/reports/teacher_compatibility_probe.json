@@ -1,0 +1,22 @@
+{
+  "probe_scope": "synthetic_text_only",
+  "requests": [
+    {
+      "accepted": false,
+      "error_category": "logprobs_permission_denied",
+      "model_requested": "gpt-5-mini",
+      "passed": false
+    },
+    {
+      "accepted": true,
+      "model_requested": "gpt-4o-mini",
+      "model_resolved": "gpt-4o-mini-2024-07-18",
+      "passed": true,
+      "recognized_label_mass": 0.9999999417373143,
+      "selected_rating": 4,
+      "system_fingerprint": "fp_78ae5ec8ce"
+    }
+  ],
+  "result": "gpt-4o-mini_is_v1_public_teacher",
+  "research_data_used": false
+}

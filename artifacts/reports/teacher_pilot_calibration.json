@@ -1,0 +1,9 @@
+{
+  "accepted_rate": 1.0,
+  "brier_score": 0.09952734392354154,
+  "ece": 0.09976339161833075,
+  "exact_match_accuracy": 0.9,
+  "mean_recognized_mass": 0.999999955280782,
+  "records": 10,
+  "rubric_id": "banking77_pair_relevance_v1"
+}

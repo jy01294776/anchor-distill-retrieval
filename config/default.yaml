@@ -1,0 +1,19 @@
+project:
+  seed: 20260722
+  public_dataset: banking77
+  label_budgets: [1, 4, 16, -1]
+teacher:
+  model: gpt-4o-mini
+  top_logprobs: 20
+  minimum_label_mass: 0.95
+  maximum_refusal_rate: 0.01
+training:
+  base_model: sentence-transformers/all-MiniLM-L6-v2
+  reference_model: sentence-transformers/sentence-t5-xl
+  batch_size: 32
+  epochs: 2
+  learning_rate: 0.00002
+  hybrid_lambdas: [0.25, 0.5, 0.75]
+evaluation:
+  metrics: [recall_at_1, recall_at_5, mrr, ndcg_at_10, macro_f1, ece]
+  bootstrap_replicates: 1000

@@ -1,0 +1,97 @@
+services:
+  api:
+    build: .
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      ANCHOR_DISTILL_PROJECT_ROOT: /app
+      DATABASE_URL: postgresql+psycopg://anchor:anchor@postgres:5432/anchor
+      REDIS_URL: redis://redis:6379/0
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command:
+      - celery
+      - -A
+      - anchor_distill.jobs.tasks:celery_app
+      - worker
+      - --loglevel=INFO
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      ANCHOR_DISTILL_PROJECT_ROOT: /app
+      DATABASE_URL: postgresql+psycopg://anchor:anchor@postgres:5432/anchor
+      REDIS_URL: redis://redis:6379/0
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: anchor
+      POSTGRES_USER: anchor
+      POSTGRES_PASSWORD: anchor
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anchor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis-data:/data
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.5.0
+    command:
+      - mlflow
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --artifacts-destination
+      - /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+volumes:
+  postgres-data:
+  redis-data:
+  mlflow-data:
+  prometheus-data:

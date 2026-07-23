@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "anchor-distill-retrieval"
+version = "0.1.0"
+description = "Evidence-first soft-target distillation for semantic retrieval"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Xu (Billy) Chen" }]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "numpy>=1.26,<3",
+  "openai>=1.68,<3",
+  "prometheus-client>=0.21,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "sqlalchemy>=2.0,<3",
+  "structlog>=24.4,<26",
+  "typer>=0.15,<1",
+]
+
+[project.optional-dependencies]
+ml = [
+  "mlflow>=2.20,<4",
+  "pandas>=2.2,<3",
+  "scikit-learn>=1.6,<2",
+  "sentence-transformers>=5.1,<6",
+  "torch>=2.8,<3",
+]
+systems = [
+  "celery[redis]>=5.4,<6",
+  "opentelemetry-api>=1.29,<2",
+  "opentelemetry-sdk>=1.29,<2",
+  "psycopg[binary]>=3.2,<4",
+  "redis>=5.2,<7",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.25,<1",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+anchor-distill = "anchor_distill.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anchor_distill"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["anchor_distill"]
+
+[[tool.mypy.overrides]]
+module = ["celery", "celery.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "anchor_distill.jobs.tasks"
+disallow_untyped_decorators = false

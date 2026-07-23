@@ -1,0 +1,13 @@
+{
+  "embedding_dimension": 384,
+  "latency_p50_ms": 84.69783398322761,
+  "latency_p95_ms": 157.47579105664045,
+  "model_version": "sentence-transformers/all-MiniLM-L6-v2",
+  "platform": "macOS-26.5.2-arm64-arm-64bit",
+  "process_peak_rss_mb": 628.15625,
+  "python": "3.12.12",
+  "python_traced_peak_memory_mb": 0.9066019058227539,
+  "repeats": 5,
+  "samples": 256,
+  "throughput_items_per_second": 2591.3204292406876
+}

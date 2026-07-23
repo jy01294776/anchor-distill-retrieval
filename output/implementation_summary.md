@@ -27,7 +27,7 @@ Validated experiment evidence now includes:
 - a quality/performance/cost frontier with observed and projected teacher cost;
 - a 10,003-record train-only evidence index and low-confidence retrieval demo
   with typed public-example citations and deterministic explanations;
-- 26 passing local tests, strict mypy, Ruff, a safe 190-file isolation scan,
+- 28 passing local tests, strict mypy, Ruff, a safe 192-file isolation scan,
   and successful wheel/sdist builds.
 
 The public repository is

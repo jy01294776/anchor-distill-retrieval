@@ -54,8 +54,8 @@
 - Removed three machine-specific absolute paths from the public teacher
   summary and added a regression test for relative artifact paths.
 - Local validation passes: Ruff format/check, strict mypy over 26 source files,
-  26 tests passed with one live-systems test skipped, isolation scan safe over
-  190 files, and wheel/sdist build succeeded.
+  28 tests passed with one live-systems test skipped, isolation scan safe over
+  192 files, and wheel/sdist build succeeded.
 
 ## Remote validation
 

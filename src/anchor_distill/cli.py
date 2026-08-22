@@ -19,12 +19,16 @@ isolation_app = typer.Typer(no_args_is_help=True)
 evaluate_app = typer.Typer(no_args_is_help=True)
 benchmark_app = typer.Typer(no_args_is_help=True)
 train_app = typer.Typer(no_args_is_help=True)
+report_app = typer.Typer(no_args_is_help=True)
+retrieval_app = typer.Typer(no_args_is_help=True)
 app.add_typer(data_app, name="data")
 app.add_typer(teacher_app, name="teacher")
 app.add_typer(isolation_app, name="isolation")
 app.add_typer(evaluate_app, name="evaluate")
 app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(train_app, name="train")
+app.add_typer(report_app, name="report")
+app.add_typer(retrieval_app, name="retrieval")
 
 
 class OutputFormat(StrEnum):
@@ -36,6 +40,105 @@ class OutputFormat(StrEnum):
 def data_prepare() -> None:
     manifest = prepare_banking77()
     typer.echo(json.dumps(manifest, indent=2, sort_keys=True))
+
+
+@retrieval_app.command("build")
+def retrieval_build(
+    model_name: Annotated[
+        str,
+        typer.Option(help="SentenceTransformer model or local model path."),
+    ] = "models/listwise_hard_teacher_minilm",
+    index_name: Annotated[
+        str,
+        typer.Option(help="NPZ filename under models/."),
+    ] = "banking77_evidence_index.npz",
+) -> None:
+    from sentence_transformers import SentenceTransformer
+
+    from anchor_distill.data import anchors_from_categories, load_banking77
+    from anchor_distill.retrieval import build_index, save_index_manifest
+    from anchor_distill.training import _device_name
+
+    settings = Settings()
+    examples = load_banking77(settings.path("data", "raw", "banking77"))
+    anchors = anchors_from_categories(example.category for example in examples)
+    model = SentenceTransformer(model_name, device=_device_name())
+    index = build_index(
+        model,
+        anchors,
+        model_version=model_name,
+        examples=examples,
+    )
+    destination = settings.path("models", index_name)
+    index.save(destination)
+    manifest = destination.with_suffix(".manifest.json")
+    save_index_manifest(manifest, index)
+    typer.echo(
+        json.dumps(
+            {
+                "anchors": len(index.anchor_ids),
+                "evidence_records": len(index.evidence_ids),
+                "evidence_split": "train",
+                "index": str(destination.relative_to(settings.project_root)),
+                "manifest": str(manifest.relative_to(settings.project_root)),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@retrieval_app.command("query")
+def retrieval_query(
+    query: Annotated[str, typer.Option(min=1, max=2000)],
+    model_name: Annotated[
+        str,
+        typer.Option(help="Model used to build the evidence index."),
+    ] = "models/listwise_hard_teacher_minilm",
+    index_name: Annotated[
+        str,
+        typer.Option(help="NPZ filename under models/."),
+    ] = "banking77_evidence_index.npz",
+    top_k: Annotated[int, typer.Option(min=1, max=20)] = 3,
+    evidence_per_hit: Annotated[int, typer.Option(min=1, max=5)] = 2,
+    output_name: Annotated[
+        str | None,
+        typer.Option(help="Optional JSON filename under artifacts/reports/."),
+    ] = None,
+) -> None:
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
+
+    from anchor_distill.retrieval import NumpyIndex, retrieve_with_evidence
+    from anchor_distill.training import _device_name
+
+    settings = Settings()
+    model = SentenceTransformer(model_name, device=_device_name())
+    index = NumpyIndex.load(settings.path("models", index_name))
+    if index.model_version != model_name:
+        raise typer.BadParameter(
+            f"index expects {index.model_version!r}, received {model_name!r}"
+        )
+    embedding = np.asarray(
+        model.encode(
+            [query],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+    )[0]
+    result = retrieve_with_evidence(
+        index,
+        embedding,
+        query=query,
+        top_k=top_k,
+        evidence_per_hit=evidence_per_hit,
+    )
+    if output_name:
+        destination = settings.path("artifacts", "reports", output_name)
+        destination.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+        result["artifact"] = str(destination.relative_to(settings.project_root))
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @teacher_app.command("probe")
@@ -72,6 +175,77 @@ def teacher_pilot(
         client=TeacherClient(settings),
     )
     typer.echo(json.dumps(result.__dict__, indent=2, sort_keys=True))
+
+
+@teacher_app.command("dataset")
+def teacher_dataset(
+    train_queries: Annotated[int, typer.Option(min=1, max=1000)] = 128,
+    calibration_queries: Annotated[int, typer.Option(min=1, max=500)] = 64,
+    candidates: Annotated[int, typer.Option(min=2, max=20)] = 10,
+    max_cost_usd: Annotated[float, typer.Option(min=0.01, max=1.0)] = 0.25,
+    workers: Annotated[int, typer.Option(min=1, max=32)] = 8,
+    dry_run: Annotated[
+        bool,
+        typer.Option(help="Print the deterministic plan without API calls."),
+    ] = False,
+) -> None:
+    from sentence_transformers import SentenceTransformer
+
+    from anchor_distill.data import anchors_from_categories, load_banking77
+    from anchor_distill.teacher_pipeline import (
+        build_teacher_dataset_plan,
+        run_teacher_dataset,
+    )
+    from anchor_distill.training import _device_name
+
+    settings = Settings()
+    selector_model = "sentence-transformers/all-MiniLM-L6-v2"
+    selector = SentenceTransformer(selector_model, device=_device_name())
+    if dry_run:
+        examples = load_banking77(settings.path("data", "raw", "banking77"))
+        anchors = anchors_from_categories(example.category for example in examples)
+        plan, _, _ = build_teacher_dataset_plan(
+            examples=examples,
+            anchors=anchors,
+            selector=selector,
+            selector_model=selector_model,
+            train_query_count=train_queries,
+            calibration_query_count=calibration_queries,
+            candidates_per_query=candidates,
+            seed=settings.seed,
+        )
+        typer.echo(json.dumps(plan.__dict__, indent=2, sort_keys=True))
+        if plan.estimated_upper_bound_usd > max_cost_usd:
+            raise typer.Exit(code=1)
+        return
+    result = run_teacher_dataset(
+        raw_dir=settings.path("data", "raw", "banking77"),
+        train_output_path=settings.path(
+            "data",
+            "interim",
+            "teacher_train.jsonl",
+        ),
+        calibration_output_path=settings.path(
+            "data",
+            "interim",
+            "teacher_calibration.jsonl",
+        ),
+        summary_path=settings.path(
+            "artifacts",
+            "reports",
+            "teacher_dataset_summary.json",
+        ),
+        selector=selector,
+        selector_model=selector_model,
+        train_query_count=train_queries,
+        calibration_query_count=calibration_queries,
+        candidates_per_query=candidates,
+        max_cost_usd=max_cost_usd,
+        workers=workers,
+        seed=settings.seed,
+        client=TeacherClient(settings),
+    )
+    typer.echo(json.dumps(result.__dict__, indent=2, sort_keys=True, default=str))
 
 
 @isolation_app.command("check")
@@ -141,6 +315,10 @@ def evaluate_compare(
     baseline_model: Annotated[str, typer.Option()] = (
         "sentence-transformers/all-MiniLM-L6-v2"
     ),
+    output_name: Annotated[
+        str | None,
+        typer.Option(help="JSON filename under artifacts/benchmarks."),
+    ] = None,
     bootstrap_replicates: Annotated[
         int,
         typer.Option(min=100, max=10000),
@@ -171,11 +349,10 @@ def evaluate_compare(
         replicates=bootstrap_replicates,
         seed=settings.seed,
     )
-    destination = settings.path(
-        "artifacts",
-        "benchmarks",
-        "gold_1shot_vs_zero_shot.json",
+    artifact_name = output_name or (
+        f"{Path(candidate_model).name}_vs_{Path(baseline_model).name}.json"
     )
+    destination = settings.path("artifacts", "benchmarks", artifact_name)
     save_comparison(destination, comparison)
     typer.echo(
         json.dumps(
@@ -196,6 +373,10 @@ def benchmark_encoder_command(
         str,
         typer.Option(help="SentenceTransformer model identifier."),
     ] = "sentence-transformers/all-MiniLM-L6-v2",
+    output_name: Annotated[
+        str | None,
+        typer.Option(help="JSON filename under artifacts/benchmarks."),
+    ] = None,
     samples: Annotated[int, typer.Option(min=1, max=1000)] = 256,
     repeats: Annotated[int, typer.Option(min=1, max=20)] = 5,
 ) -> None:
@@ -219,11 +400,10 @@ def benchmark_encoder_command(
         model_version=model_name,
         repeats=repeats,
     )
-    destination = settings.path(
-        "artifacts",
-        "benchmarks",
-        "encoder_minilm.json",
+    artifact_name = output_name or (
+        f"encoder_{Path(model_name).name.replace('-', '_')}.json"
     )
+    destination = settings.path("artifacts", "benchmarks", artifact_name)
     save_benchmark(destination, result)
     typer.echo(
         json.dumps(
@@ -238,9 +418,39 @@ def benchmark_encoder_command(
     )
 
 
+@report_app.command("frontier")
+def report_frontier() -> None:
+    from anchor_distill.frontier import build_quality_cost_frontier
+
+    settings = Settings()
+    result = build_quality_cost_frontier(
+        benchmark_dir=settings.path("artifacts", "benchmarks"),
+        teacher_summary_path=settings.path(
+            "artifacts",
+            "reports",
+            "teacher_dataset_summary.json",
+        ),
+        json_output_path=settings.path(
+            "artifacts",
+            "reports",
+            "quality_cost_frontier.json",
+        ),
+        markdown_output_path=settings.path(
+            "artifacts",
+            "reports",
+            "quality_cost_frontier.md",
+        ),
+    )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
 @train_app.command("gold")
 def train_gold(
     shots: Annotated[int, typer.Option(min=1, max=16)] = 1,
+    full: Annotated[
+        bool,
+        typer.Option(help="Use every official training example."),
+    ] = False,
     epochs: Annotated[int, typer.Option(min=1, max=10)] = 2,
     base_model: Annotated[str, typer.Option()] = (
         "sentence-transformers/all-MiniLM-L6-v2"
@@ -249,21 +459,22 @@ def train_gold(
     from anchor_distill.data import (
         anchors_from_categories,
         load_banking77,
-        stratified_few_shot,
+        select_training_examples,
     )
     from anchor_distill.training import RetrievalTrainer
 
     settings = Settings()
     examples = load_banking77(settings.path("data", "raw", "banking77"))
-    training_examples = stratified_few_shot(
+    training_examples = select_training_examples(
         examples,
-        shots,
+        shots_per_category=None if full else shots,
         seed=settings.seed,
     )
     anchors = anchors_from_categories(example.category for example in examples)
+    budget_name = "full" if full else f"{shots}shot"
     destination = settings.path(
         "models",
-        f"gold_{shots}shot_minilm",
+        f"gold_{budget_name}_minilm",
     )
     trainer = RetrievalTrainer(
         base_model=base_model,
@@ -276,5 +487,64 @@ def train_gold(
         epochs=epochs,
         output_dir=destination,
         label_budget=len(training_examples),
+    )
+    typer.echo(json.dumps(manifest.__dict__, indent=2, sort_keys=True))
+
+
+@train_app.command("distilled")
+def train_distilled(
+    mode: Annotated[str, typer.Option()] = "soft",
+    objective: Annotated[str, typer.Option()] = "listwise",
+    gold_shots: Annotated[int, typer.Option(min=1, max=16)] = 1,
+    epochs: Annotated[int, typer.Option(min=1, max=10)] = 2,
+    hybrid_lambda: Annotated[float, typer.Option(min=0.0, max=1.0)] = 0.5,
+) -> None:
+    from anchor_distill.data import (
+        anchors_from_categories,
+        load_banking77,
+        select_training_examples,
+    )
+    from anchor_distill.schemas import TeacherRecord
+    from anchor_distill.training import RetrievalTrainer
+
+    if mode not in {"hard", "soft", "hybrid"}:
+        raise typer.BadParameter("mode must be hard, soft, or hybrid")
+    if objective not in {"listwise", "ordinal"}:
+        raise typer.BadParameter("objective must be listwise or ordinal")
+    settings = Settings()
+    examples = load_banking77(settings.path("data", "raw", "banking77"))
+    anchors = anchors_from_categories(example.category for example in examples)
+    teacher_path = settings.path("data", "interim", "teacher_train.jsonl")
+    teacher_records = [
+        TeacherRecord.model_validate_json(line)
+        for line in teacher_path.read_text().splitlines()
+        if line.strip()
+    ]
+    gold_examples = (
+        select_training_examples(
+            examples,
+            shots_per_category=gold_shots,
+            seed=settings.seed,
+        )
+        if mode == "hybrid"
+        else []
+    )
+    trainer_mode = f"listwise_{mode}" if objective == "listwise" else mode
+    suffix = f"_{gold_shots}shot" if mode == "hybrid" else ""
+    destination = settings.path(
+        "models",
+        f"{objective}_{mode}{suffix}_teacher_minilm",
+    )
+    trainer = RetrievalTrainer(seed=settings.seed)
+    manifest = trainer.train(
+        mode=trainer_mode,
+        examples=gold_examples,
+        anchors=anchors,
+        teacher_records=teacher_records,
+        query_text={example.example_id: example.text for example in examples},
+        epochs=epochs,
+        hybrid_lambda=hybrid_lambda,
+        output_dir=destination,
+        label_budget=len(gold_examples),
     )
     typer.echo(json.dumps(manifest.__dict__, indent=2, sort_keys=True))

@@ -1,0 +1,11 @@
+{
+  "ece": 0.6360025182946936,
+  "examples": 3080,
+  "macro_f1": 0.6463807933730579,
+  "model_version": "sentence-transformers/sentence-t5-xl",
+  "mrr": 0.749719849956513,
+  "ndcg_at_10": 0.7887088760331692,
+  "recall_at_1": 0.6516233766233767,
+  "recall_at_5": 0.8633116883116884,
+  "split": "test"
+}

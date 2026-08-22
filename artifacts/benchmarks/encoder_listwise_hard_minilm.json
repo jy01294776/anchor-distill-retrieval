@@ -1,0 +1,15 @@
+{
+  "embedding_dimension": 384,
+  "latency_p50_ms": 94.10241711884737,
+  "latency_p95_ms": 225.00545787625015,
+  "model_version": "models/listwise_hard_teacher_minilm",
+  "parameter_count": 22713216,
+  "parameter_memory_mb": 86.64404296875,
+  "platform": "macOS-26.5.2-arm64-arm-64bit",
+  "process_peak_rss_mb": 627.453125,
+  "python": "3.12.12",
+  "python_traced_peak_memory_mb": 0.9084291458129883,
+  "repeats": 5,
+  "samples": 256,
+  "throughput_items_per_second": 2164.9910673019426
+}

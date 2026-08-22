@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     project_root: Path = Field(default_factory=discover_project_root)
     openai_api_key: str | None = Field(default=None, repr=False)
-    teacher_model: str = "gpt-4o-mini"
+    teacher_model: str = "gpt-4o-mini-2024-07-18"
     database_url: str = "sqlite:///./work/jobs.db"
     redis_url: str = "redis://localhost:6379/0"
     mlflow_tracking_uri: str = "./mlruns"

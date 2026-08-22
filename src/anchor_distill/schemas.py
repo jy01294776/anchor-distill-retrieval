@@ -69,6 +69,11 @@ class TeacherRecord(BaseModel):
     accepted: bool
     refusal: bool = False
     request_id: str | None = None
+    prompt_tokens: int = Field(default=0, ge=0)
+    cached_prompt_tokens: int = Field(default=0, ge=0)
+    completion_tokens: int = Field(default=0, ge=0)
+    estimated_cost_usd: float = Field(default=0.0, ge=0)
+    latency_ms: float = Field(default=0.0, ge=0)
 
     @field_validator("label_probabilities")
     @classmethod
@@ -85,13 +90,23 @@ class TeacherRecord(BaseModel):
 class RetrieveRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
+    evidence_per_hit: int = Field(default=2, ge=1, le=5)
+
+
+class EvidenceCitation(BaseModel):
+    citation_id: str
+    source: str
+    example_id: str
+    anchor_id: str
+    text: str
+    score: float
 
 
 class RetrievalHit(BaseModel):
     anchor_id: str
     label: str
     score: float
-    evidence: list[str] = Field(default_factory=list)
+    evidence: list[EvidenceCitation] = Field(default_factory=list)
 
 
 class RetrieveResponse(BaseModel):
@@ -100,6 +115,8 @@ class RetrieveResponse(BaseModel):
     hits: list[RetrievalHit]
     needs_review: bool
     confidence_margin: float
+    explanation: str
+    evidence_split: str
 
 
 class PromotionEvidence(BaseModel):

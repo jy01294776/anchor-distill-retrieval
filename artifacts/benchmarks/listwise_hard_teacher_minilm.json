@@ -1,0 +1,11 @@
+{
+  "ece": 0.6307744650049256,
+  "examples": 3080,
+  "macro_f1": 0.6406768514392687,
+  "model_version": "models/listwise_hard_teacher_minilm",
+  "mrr": 0.7509319541101424,
+  "ndcg_at_10": 0.792204125226964,
+  "recall_at_1": 0.6519480519480519,
+  "recall_at_5": 0.8704545454545455,
+  "split": "test"
+}

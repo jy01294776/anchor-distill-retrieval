@@ -14,12 +14,11 @@ from anchor_distill.jobs.repository import (
     JobRepository,
 )
 from anchor_distill.jobs.service import cancel_job, resume_job
-from anchor_distill.retrieval import NumpyIndex
+from anchor_distill.retrieval import NumpyIndex, retrieve_with_evidence
 from anchor_distill.schemas import (
     JobCreate,
     JobEventRead,
     JobRead,
-    RetrievalHit,
     RetrieveRequest,
     RetrieveResponse,
 )
@@ -129,19 +128,14 @@ def create_app(
                 show_progress_bar=False,
             )
         )[0]
-        raw_hits = active_index.search(embedding, request.top_k)
-        margin = (
-            raw_hits[0]["score"] - raw_hits[1]["score"]
-            if len(raw_hits) > 1
-            else raw_hits[0]["score"]
-        )
-        return RetrieveResponse(
+        result = retrieve_with_evidence(
+            active_index,
+            embedding,
             query=request.query,
-            model_version=active_index.model_version,
-            hits=[RetrievalHit(**hit) for hit in raw_hits],
-            needs_review=margin < 0.08,
-            confidence_margin=float(margin),
+            top_k=request.top_k,
+            evidence_per_hit=request.evidence_per_hit,
         )
+        return RetrieveResponse.model_validate(result)
 
     return app
 

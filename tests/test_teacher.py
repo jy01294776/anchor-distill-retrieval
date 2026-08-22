@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import math
 
-from anchor_distill.schemas import TokenAlternative, TokenPosition
-from anchor_distill.teacher import extract_soft_distribution
+from anchor_distill.schemas import TeacherRecord, TokenAlternative, TokenPosition
+from anchor_distill.teacher import (
+    estimate_teacher_cost,
+    extract_soft_distribution,
+)
+from anchor_distill.training import teacher_expected_relevance
 
 
 def test_extracts_normalized_five_label_distribution() -> None:
@@ -42,3 +46,30 @@ def test_rejects_missing_rating_position() -> None:
     assert mass == 0
     assert entropy == 0
     assert not accepted
+
+
+def test_teacher_cost_separates_cached_and_uncached_input() -> None:
+    cost = estimate_teacher_cost(
+        prompt_tokens=1000,
+        cached_prompt_tokens=400,
+        completion_tokens=100,
+    )
+    expected = (600 * 0.15 + 400 * 0.075 + 100 * 0.60) / 1_000_000
+    assert cost == expected
+
+
+def test_expected_relevance_uses_full_soft_distribution() -> None:
+    record = TeacherRecord(
+        query_id="q",
+        anchor_id="a",
+        rubric_id="r",
+        prompt_hash="p",
+        model_requested="m",
+        model_resolved="m",
+        selected_rating=4,
+        label_probabilities=(0.0, 0.1, 0.2, 0.6, 0.1),
+        recognized_mass=1.0,
+        entropy=0.5,
+        accepted=True,
+    )
+    assert teacher_expected_relevance(record) == 3.7

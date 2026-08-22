@@ -219,7 +219,12 @@ def build_handlers(settings: Settings) -> dict[JobType, JobHandler]:
             )
         )
         model = SentenceTransformer(model_name, device=_device_name())
-        index = build_index(model, anchors, model_version=model_name)
+        index = build_index(
+            model,
+            anchors,
+            model_version=model_name,
+            examples=examples,
+        )
         output = _relative_path(
             settings,
             str(job.payload.get("output", "")),
@@ -230,6 +235,7 @@ def build_handlers(settings: Settings) -> dict[JobType, JobHandler]:
         save_index_manifest(manifest, index)
         return {
             "anchors": len(index.anchor_ids),
+            "evidence_records": len(index.evidence_ids),
             "output": str(output.relative_to(settings.project_root)),
         }
 

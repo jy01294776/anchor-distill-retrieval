@@ -2,8 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+
+from anchor_distill.data import BankingExample
 from anchor_distill.schemas import TeacherRecord
-from anchor_distill.teacher_pipeline import run_teacher_pilot
+from anchor_distill.teacher_pipeline import (
+    _relative_output_paths,
+    build_teacher_dataset_plan,
+    run_teacher_pilot,
+)
 
 
 class FakeTeacher:
@@ -36,6 +43,49 @@ class FakeTeacher:
             entropy=0.4,
             accepted=True,
         )
+
+
+class FakeSelector:
+    def encode(self, texts: list[str], **_: object) -> np.ndarray:
+        vectors = {
+            "query a": [1.0, 0.0],
+            "query b": [1.0, 0.0],
+            "anchor a": [0.0, 1.0],
+            "anchor b": [1.0, 0.0],
+        }
+        return np.asarray([vectors[text] for text in texts], dtype=float)
+
+
+def test_teacher_plan_does_not_force_gold_anchor_into_candidates() -> None:
+    examples = [
+        BankingExample("train-0", "train", "query a", "a"),
+        BankingExample("train-1", "train", "query b", "b"),
+    ]
+    plan, pairs, _ = build_teacher_dataset_plan(
+        examples=examples,
+        anchors={"a": "anchor a", "b": "anchor b"},
+        selector=FakeSelector(),
+        selector_model="fake",
+        train_query_count=1,
+        calibration_query_count=1,
+        candidates_per_query=1,
+        seed=7,
+    )
+    assert not plan.gold_labels_used_for_candidate_selection
+    assert all(pair.anchor_id == "b" for pair in pairs)
+
+
+def test_relative_output_paths_do_not_expose_project_root(tmp_path: Path) -> None:
+    train, calibration, summary = _relative_output_paths(
+        tmp_path / "data" / "interim" / "teacher_train.jsonl",
+        tmp_path / "data" / "interim" / "teacher_calibration.jsonl",
+        tmp_path / "artifacts" / "reports" / "teacher_dataset_summary.json",
+    )
+
+    assert train == "data/interim/teacher_train.jsonl"
+    assert calibration == "data/interim/teacher_calibration.jsonl"
+    assert summary == "artifacts/reports/teacher_dataset_summary.json"
+    assert str(tmp_path) not in "\n".join((train, calibration, summary))
 
 
 def test_teacher_pilot_uses_training_examples_only(tmp_path: Path) -> None:

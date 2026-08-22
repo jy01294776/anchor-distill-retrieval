@@ -34,3 +34,45 @@
 - Complete cost accounting and a larger teacher-calibration gold set before
   making distillation-effect or cost-savings claims.
 - Publish to GitHub after authentication is renewed.
+
+## 2026-07-23
+
+- Created and pushed the public GitHub repository:
+  `https://github.com/jy01294776/anchor-distill-retrieval`.
+- Completed 4-shot, 16-shot, and full-supervision MiniLM baselines plus the
+  Sentence-T5-XL zero-shot reference.
+- Completed a budget-capped public teacher run: 1,920/1,920 accepted pairs,
+  269,422 prompt tokens, 11,520 completion tokens, and $0.0473 observed cost.
+- Completed ordinal and listwise hard, soft, and hybrid distillation. The
+  ordinal pairwise objective failed; listwise hard KD improved Recall@1 by
+  0.0282 over zero-shot MiniLM. Soft KD was 0.0201 below hard KD, and the
+  hybrid-vs-1-shot interval crossed zero.
+- Generated the quality/performance/cost frontier and measured the 22.7M
+  student against the 1.24B Sentence-T5-XL reference.
+- Added an actual PostgreSQL/Redis/Celery job round-trip test to GitHub Actions
+  and changed container scanning to inspect the locally loaded image.
+- Removed three machine-specific absolute paths from the public teacher
+  summary and added a regression test for relative artifact paths.
+- Local validation passes: Ruff format/check, strict mypy over 26 source files,
+  28 tests passed with one live-systems test skipped, isolation scan safe over
+  192 files, and wheel/sdist build succeeded.
+
+## Remote validation
+
+- Pushed `agent/complete-experiment-matrix` and opened draft PR #1.
+- GitHub Actions passed strict tests, package build, the live
+  PostgreSQL/Redis/Celery system round trip, container build, SBOM generation,
+  and the Trivy HIGH/CRITICAL gate.
+- The security gate first failed on real findings. Fixable Python packages and
+  the base runtime were upgraded; only upstream-unfixed findings are ignored.
+- Updated and rendered both local resume variants after the remote gates
+  passed.
+- Added train-only evidence embeddings and typed citations to `/v1/retrieve`,
+  plus runnable `retrieval build` and `retrieval query` CLI commands.
+- Built the real 10,003-record BANKING77 training evidence index. The ambiguous
+  `cash card payment` demo produced margin 0.0023, routed to review, and cited
+  the top competing public training examples.
+- Reverified the separate doctoral freeze: source, data, and artifact
+  before/after hash manifests are identical. A source-only, no-history backup
+  was pushed to a distinct private repository after tracked-file secret and
+  data-extension scans passed; no doctoral files entered this repository.

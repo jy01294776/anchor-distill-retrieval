@@ -3,7 +3,7 @@ project:
   public_dataset: banking77
   label_budgets: [1, 4, 16, -1]
 teacher:
-  model: gpt-4o-mini
+  model: gpt-4o-mini-2024-07-18
   top_logprobs: 20
   minimum_label_mass: 0.95
   maximum_refusal_rate: 0.01

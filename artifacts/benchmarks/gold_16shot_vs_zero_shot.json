@@ -1,0 +1,18 @@
+{
+  "baseline_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "candidate_model": "models/gold_16shot_minilm",
+  "examples": 3080,
+  "recall_at_1": {
+    "ci_high": 0.2194886363636363,
+    "ci_low": 0.18765422077922078,
+    "difference": 0.20324675324675326,
+    "probability_positive": 1.0
+  },
+  "reciprocal_rank": {
+    "ci_high": 0.17451034046015784,
+    "ci_low": 0.15237928487714153,
+    "difference": 0.16347483776961477,
+    "probability_positive": 1.0
+  },
+  "split": "test"
+}

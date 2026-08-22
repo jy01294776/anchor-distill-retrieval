@@ -1,0 +1,38 @@
+{
+  "accepted_pairs": 1920,
+  "cached_prompt_tokens": 0,
+  "calibration_output_path": "data/interim/teacher_calibration.jsonl",
+  "calibration_pairs": 640,
+  "completion_tokens": 11520,
+  "estimated_cost_usd": 0.047325299999999994,
+  "latency_p50_ms": 515.4790838714689,
+  "latency_p95_ms": 909.3962498009205,
+  "mean_entropy": 0.3344030587445629,
+  "pair_brier_score": 0.09248562936898853,
+  "pair_ece": 0.0841690539013351,
+  "pair_exact_match_accuracy": 0.8890625,
+  "plan": {
+    "calibration_candidate_recall": 0.9375,
+    "calibration_queries": 64,
+    "candidates_per_query": 10,
+    "estimated_upper_bound_usd": 0.07624935,
+    "gold_labels_used_for_candidate_selection": false,
+    "planned_pairs": 1920,
+    "selector_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "train_queries": 128
+  },
+  "pricing": {
+    "cached_input_usd_per_million": 0.075,
+    "captured_on": "2026-07-23",
+    "input_usd_per_million": 0.15,
+    "max_cost_usd": 0.25,
+    "output_usd_per_million": 0.6,
+    "source": "https://developers.openai.com/api/docs/models/gpt-4o-mini"
+  },
+  "prompt_tokens": 269422,
+  "query_top1_accuracy": 0.75,
+  "recorded_pairs": 1920,
+  "summary_path": "artifacts/reports/teacher_dataset_summary.json",
+  "train_output_path": "data/interim/teacher_train.jsonl",
+  "train_pairs": 1280
+}

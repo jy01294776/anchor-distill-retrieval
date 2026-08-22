@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, cast
@@ -29,6 +30,12 @@ customer query. Return one integer relevance score:
 Judge only the supplied query and candidate intent."""
 
 LabelDistribution = tuple[float, float, float, float, float]
+TEACHER_MAX_COMPLETION_TOKENS = 16
+TEACHER_INPUT_USD_PER_MILLION = 0.15
+TEACHER_CACHED_INPUT_USD_PER_MILLION = 0.075
+TEACHER_OUTPUT_USD_PER_MILLION = 0.60
+TEACHER_PRICING_SOURCE = "https://developers.openai.com/api/docs/models/gpt-4o-mini"
+TEACHER_PRICING_CAPTURED_ON = "2026-07-23"
 
 RESPONSE_FORMAT = cast(
     ResponseFormatJSONSchema,
@@ -74,6 +81,21 @@ def prompt_hash() -> str:
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+
+
+def estimate_teacher_cost(
+    *,
+    prompt_tokens: int,
+    cached_prompt_tokens: int,
+    completion_tokens: int,
+) -> float:
+    cached = min(prompt_tokens, cached_prompt_tokens)
+    uncached = prompt_tokens - cached
+    return (
+        uncached * TEACHER_INPUT_USD_PER_MILLION
+        + cached * TEACHER_CACHED_INPUT_USD_PER_MILLION
+        + completion_tokens * TEACHER_OUTPUT_USD_PER_MILLION
+    ) / 1_000_000
 
 
 def build_messages(query: str, anchor: str) -> list[ChatCompletionMessageParam]:
@@ -206,14 +228,17 @@ class TeacherClient:
         anchor_id: str,
         anchor: str,
     ) -> TeacherRecord:
+        started = time.perf_counter()
         response = self.client.chat.completions.create(
             model=self.settings.teacher_model,
             messages=build_messages(query, anchor),
             response_format=RESPONSE_FORMAT,
             logprobs=True,
             top_logprobs=20,
+            max_tokens=TEACHER_MAX_COMPLETION_TOKENS,
             temperature=0,
         )
+        latency_ms = (time.perf_counter() - started) * 1000
         choice = response.choices[0]
         refusal = bool(getattr(choice.message, "refusal", None))
         if refusal:
@@ -225,6 +250,13 @@ class TeacherClient:
             _positions_from_choice(choice),
             selected_rating=selected,
             minimum_mass=self.settings.teacher_minimum_label_mass,
+        )
+        usage = response.usage
+        prompt_tokens = int(usage.prompt_tokens) if usage else 0
+        completion_tokens = int(usage.completion_tokens) if usage else 0
+        prompt_details = usage.prompt_tokens_details if usage else None
+        cached_prompt_tokens = (
+            int(prompt_details.cached_tokens or 0) if prompt_details else 0
         )
         return TeacherRecord(
             query_id=query_id,
@@ -241,6 +273,15 @@ class TeacherClient:
             accepted=accepted,
             refusal=False,
             request_id=response.id,
+            prompt_tokens=prompt_tokens,
+            cached_prompt_tokens=cached_prompt_tokens,
+            completion_tokens=completion_tokens,
+            estimated_cost_usd=estimate_teacher_cost(
+                prompt_tokens=prompt_tokens,
+                cached_prompt_tokens=cached_prompt_tokens,
+                completion_tokens=completion_tokens,
+            ),
+            latency_ms=latency_ms,
         )
 
     def probe(self) -> TeacherProbeResult:
@@ -290,6 +331,7 @@ def build_batch_request(
             "response_format": RESPONSE_FORMAT,
             "logprobs": True,
             "top_logprobs": 20,
+            "max_tokens": TEACHER_MAX_COMPLETION_TOKENS,
             "temperature": 0,
         },
     }

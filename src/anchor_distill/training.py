@@ -46,7 +46,11 @@ def set_seed(seed: int) -> None:
 
 def model_directory_sha256(path: Path) -> str:
     digest = hashlib.sha256()
-    files = (candidate for candidate in path.rglob("*") if candidate.is_file())
+    files = (
+        candidate
+        for candidate in path.rglob("*")
+        if candidate.is_file() and candidate.name != "training_manifest.json"
+    )
     for file in sorted(files):
         digest.update(str(file.relative_to(path)).encode())
         with file.open("rb") as handle:
@@ -117,6 +121,16 @@ def soft_kl_loss(student_probabilities: Any, teacher_probabilities: Any) -> Any:
         student_probabilities.log(),
         teacher_probabilities,
         reduction="batchmean",
+    )
+
+
+def teacher_expected_relevance(record: TeacherRecord) -> float:
+    return sum(
+        rating * probability
+        for rating, probability in enumerate(
+            record.label_probabilities,
+            start=1,
+        )
     )
 
 
@@ -199,6 +213,68 @@ class RetrievalTrainer:
         )
         return soft_kl_loss(student_probabilities, teacher)
 
+    def _listwise_teacher_loss(
+        self,
+        groups: Sequence[Sequence[TeacherRecord]],
+        query_text: dict[str, str],
+        anchor_text: dict[str, str],
+        *,
+        hard: bool,
+        teacher_temperature: float = 1.0,
+        student_temperature: float = 0.05,
+    ) -> Any:
+        import torch.nn.functional as functional
+
+        if not groups:
+            raise ValueError("listwise teacher groups are required")
+        accepted_groups = [
+            [record for record in group if record.accepted] for group in groups
+        ]
+        candidate_counts = {len(group) for group in accepted_groups}
+        if 0 in candidate_counts or len(candidate_counts) != 1:
+            raise ValueError(
+                "listwise batches require equal non-zero candidates per query"
+            )
+        candidates_per_query = candidate_counts.pop()
+        query_ids = [group[0].query_id for group in accepted_groups]
+        query_embeddings = functional.normalize(
+            self._encode([query_text[query_id] for query_id in query_ids]),
+            dim=-1,
+        )
+        flat_records = [record for group in accepted_groups for record in group]
+        anchor_embeddings = functional.normalize(
+            self._encode([anchor_text[record.anchor_id] for record in flat_records]),
+            dim=-1,
+        ).reshape(len(accepted_groups), candidates_per_query, -1)
+        similarities = self.torch.einsum(
+            "bd,bkd->bk",
+            query_embeddings,
+            anchor_embeddings,
+        )
+        student_logits = similarities / student_temperature
+        teacher_scores = self.torch.tensor(
+            [
+                [teacher_expected_relevance(record) for record in group]
+                for group in accepted_groups
+            ],
+            dtype=student_logits.dtype,
+            device=self.device,
+        )
+        if hard:
+            return functional.cross_entropy(
+                student_logits,
+                teacher_scores.argmax(dim=1),
+            )
+        teacher_probabilities = functional.softmax(
+            teacher_scores / teacher_temperature,
+            dim=1,
+        )
+        return functional.kl_div(
+            functional.log_softmax(student_logits, dim=1),
+            teacher_probabilities,
+            reduction="batchmean",
+        )
+
     def train(
         self,
         *,
@@ -214,9 +290,19 @@ class RetrievalTrainer:
         output_dir: Path,
         label_budget: int = -1,
     ) -> TrainingManifest:
-        if mode not in {"gold", "hard", "soft", "hybrid"}:
+        valid_modes = {
+            "gold",
+            "hard",
+            "soft",
+            "hybrid",
+            "listwise_hard",
+            "listwise_soft",
+            "listwise_hybrid",
+        }
+        if mode not in valid_modes:
             raise ValueError(f"unsupported training mode: {mode}")
-        if mode in {"hard", "soft", "hybrid"} and not teacher_records:
+        teacher_modes = valid_modes - {"gold"}
+        if mode in teacher_modes and not teacher_records:
             raise ValueError("teacher records are required for distillation")
         if not 0 <= hybrid_lambda <= 1:
             raise ValueError("hybrid_lambda must be in [0, 1]")
@@ -232,42 +318,77 @@ class RetrievalTrainer:
         }
         rng = random.Random(self.seed)
         accepted_records = [record for record in teacher_records if record.accepted]
-        if mode in {"hard", "soft", "hybrid"} and not accepted_records:
+        if mode in teacher_modes and not accepted_records:
             raise ValueError("no accepted teacher records are available")
+        grouped_records: dict[str, list[TeacherRecord]] = {}
+        for record in accepted_records:
+            grouped_records.setdefault(record.query_id, []).append(record)
+        teacher_groups = [
+            sorted(group, key=lambda record: record.anchor_id)
+            for _, group in sorted(grouped_records.items())
+        ]
+        listwise = mode.startswith("listwise_")
+        hybrid = mode in {"hybrid", "listwise_hybrid"}
+        hard = mode in {"hard", "listwise_hard"}
 
         for _epoch in range(epochs):
             gold_order = list(examples)
             teacher_order = list(accepted_records)
+            teacher_group_order = list(teacher_groups)
             rng.shuffle(gold_order)
             rng.shuffle(teacher_order)
+            rng.shuffle(teacher_group_order)
             if mode == "gold":
                 steps = max(1, (len(gold_order) + batch_size - 1) // batch_size)
+            elif listwise and not hybrid:
+                steps = max(
+                    1,
+                    (len(teacher_group_order) + batch_size - 1) // batch_size,
+                )
             elif mode in {"hard", "soft"}:
                 steps = max(1, (len(teacher_order) + batch_size - 1) // batch_size)
             else:
+                teacher_length = (
+                    len(teacher_group_order) if listwise else len(teacher_order)
+                )
                 steps = max(
                     1,
                     (len(gold_order) + batch_size - 1) // batch_size,
-                    (len(teacher_order) + batch_size - 1) // batch_size,
+                    (teacher_length + batch_size - 1) // batch_size,
                 )
             for step in range(steps):
                 gold_offset = (step * batch_size) % max(1, len(gold_order))
                 teacher_offset = (step * batch_size) % max(1, len(teacher_order))
+                teacher_group_offset = (step * batch_size) % max(
+                    1,
+                    len(teacher_group_order),
+                )
                 batch = gold_order[gold_offset : gold_offset + batch_size]
                 teacher_batch = teacher_order[
                     teacher_offset : teacher_offset + batch_size
+                ]
+                teacher_group_batch = teacher_group_order[
+                    teacher_group_offset : teacher_group_offset + batch_size
                 ]
                 optimizer.zero_grad()
                 if mode == "gold":
                     loss = self._gold_loss(batch, anchor_ids, anchor_texts)
                 else:
-                    teacher_loss = self._teacher_loss(
-                        teacher_batch,
-                        queries,
-                        anchors,
-                        hard=mode == "hard",
-                    )
-                    if mode == "hybrid":
+                    if listwise:
+                        teacher_loss = self._listwise_teacher_loss(
+                            teacher_group_batch,
+                            queries,
+                            anchors,
+                            hard=hard,
+                        )
+                    else:
+                        teacher_loss = self._teacher_loss(
+                            teacher_batch,
+                            queries,
+                            anchors,
+                            hard=hard,
+                        )
+                    if hybrid:
                         gold_loss = self._gold_loss(batch, anchor_ids, anchor_texts)
                         loss = (
                             hybrid_lambda * teacher_loss
@@ -285,6 +406,7 @@ class RetrievalTrainer:
             output_dir / "ordinal_head.pt",
         )
         digest = model_directory_sha256(output_dir)
+        recorded_hybrid_lambda = hybrid_lambda if hybrid else None
         run_material = {
             "mode": mode,
             "base_model": self.base_model,
@@ -296,7 +418,7 @@ class RetrievalTrainer:
                 for record in teacher_records
                 if record.accepted
             ),
-            "hybrid_lambda": hybrid_lambda if mode == "hybrid" else None,
+            "hybrid_lambda": recorded_hybrid_lambda,
         }
         run_id = hashlib.sha256(
             json.dumps(run_material, sort_keys=True).encode()
@@ -311,7 +433,7 @@ class RetrievalTrainer:
             examples=len(examples),
             accepted_teacher_records=sum(record.accepted for record in teacher_records),
             label_budget=label_budget,
-            hybrid_lambda=hybrid_lambda if mode == "hybrid" else None,
+            hybrid_lambda=recorded_hybrid_lambda,
             output_path=str(output_dir),
             model_sha256=digest,
         )

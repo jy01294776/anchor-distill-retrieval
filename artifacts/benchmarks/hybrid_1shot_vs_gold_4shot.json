@@ -1,0 +1,18 @@
+{
+  "baseline_model": "models/gold_4shot_minilm",
+  "candidate_model": "models/hybrid_1shot_teacher_minilm",
+  "examples": 3080,
+  "recall_at_1": {
+    "ci_high": -0.008433441558441602,
+    "ci_low": -0.033124999999999995,
+    "difference": -0.020454545454545454,
+    "probability_positive": 0.0
+  },
+  "reciprocal_rank": {
+    "ci_high": -0.012019529758765626,
+    "ci_low": -0.02782986528341586,
+    "difference": -0.019830827604245347,
+    "probability_positive": 0.0
+  },
+  "split": "test"
+}

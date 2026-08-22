@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: ["main", "codex/**"]
+    branches: ["main", "agent/**", "codex/**"]
   pull_request:
 
 permissions:
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --group dev
+      - run: uv sync --extra ml --group dev
       - run: uv run ruff check .
       - run: uv run mypy
       - run: uv run pytest
@@ -32,6 +32,53 @@ jobs:
           name: python-package
           path: dist/
 
+  systems-e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: anchor
+          POSTGRES_USER: anchor
+          POSTGRES_PASSWORD: anchor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U anchor"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      ANCHOR_DISTILL_PROJECT_ROOT: ${{ github.workspace }}
+      DATABASE_URL: postgresql+psycopg://anchor:anchor@localhost:5432/anchor
+      REDIS_URL: redis://localhost:6379/0
+      RUN_SYSTEM_E2E: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --extra systems --group dev
+      - name: Start Celery worker
+        run: |
+          uv run celery -A anchor_distill.jobs.tasks:celery_app worker \
+            --loglevel=INFO --concurrency=1 \
+            > /tmp/anchor-distill-celery.log 2>&1 &
+          echo $! > /tmp/anchor-distill-celery.pid
+      - name: Exercise Redis, Celery, and PostgreSQL
+        run: uv run pytest -m systems_e2e tests/integration/test_systems_e2e.py
+      - name: Show worker log on failure
+        if: failure()
+        run: cat /tmp/anchor-distill-celery.log
+
   container:
     runs-on: ubuntu-latest
     needs: test
@@ -43,13 +90,15 @@ jobs:
           context: .
           push: false
           tags: anchor-distill:${{ github.sha }}
-          outputs: type=oci,dest=/tmp/anchor-distill.tar
+          load: true
       - uses: anchore/sbom-action@v0
         with:
-          image: /tmp/anchor-distill.tar
+          image: anchor-distill:${{ github.sha }}
           artifact-name: anchor-distill.spdx.json
-      - uses: aquasecurity/trivy-action@0.32.0
+          upload-release-assets: false
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
-          input: /tmp/anchor-distill.tar
+          image-ref: anchor-distill:${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: "1"
+          ignore-unfixed: true

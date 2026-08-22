@@ -1,13 +1,15 @@
 {
   "embedding_dimension": 384,
-  "latency_p50_ms": 84.69783398322761,
-  "latency_p95_ms": 157.47579105664045,
+  "latency_p50_ms": 88.06412504054606,
+  "latency_p95_ms": 199.73337510600686,
   "model_version": "sentence-transformers/all-MiniLM-L6-v2",
+  "parameter_count": 22713216,
+  "parameter_memory_mb": 86.64404296875,
   "platform": "macOS-26.5.2-arm64-arm-64bit",
-  "process_peak_rss_mb": 628.15625,
+  "process_peak_rss_mb": 627.21875,
   "python": "3.12.12",
-  "python_traced_peak_memory_mb": 0.9066019058227539,
+  "python_traced_peak_memory_mb": 0.907562255859375,
   "repeats": 5,
   "samples": 256,
-  "throughput_items_per_second": 2591.3204292406876
+  "throughput_items_per_second": 2315.765997454257
 }
